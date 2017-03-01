@@ -1,0 +1,40 @@
+<Page xmlns="http://schemas.nativescript.org/tns.xsd" navigatingTo="navigatingTo" class="page">
+    <Page.actionBar>
+        <ActionBar title="{{ sonosIp, (zoneName || 'Sonos Tester')+' ('+ sonosIp +')' }}" icon="" class="action-bar">
+        <ActionItem tap="{{ changeIp }}"
+            ios.systemIcon="2" ios.position="right"
+            text="Edit Sonos Address" />
+        </ActionBar>
+    </Page.actionBar>
+    <GridLayout columns="*" rows="*, 100">
+        <StackLayout class="p-20" row="0" style="vertical-align:middle;">
+            <StackLayout>
+                <Label text="{{ title || 'No Music' }}" class="h2 text-center" textWrap="true" />
+                <Label text="{{ album }}" class="subtitle text-center" textWrap="true" visibility="{{ (album) ? 'visible' : 'collapsed' }}" />
+                <Label text="{{ artist }}" class="subtitle text-center" textWrap="true" visibility="{{ (artist) ? 'visible' : 'collapsed' }}" />
+                <StackLayout id="stackControls" orientation="horizontal" backgroundImage="{{ albumUrl }}"
+                    style="width:300;height:300;vertical-align:middle;horizontal-align:center;color:#FFF;background-size:cover;margin-top:15;">
+                    <Button text="&#xf4a1;" tap="{{ playPrevious }}" visibility="{{ isPlaying ? 'visible' : 'collapsed' }}" class="btn-icon" style="padding-right:2;" />
+                    <Button text="{{ isPlaying, (isPlaying) ? '&#xf478;' : '&#xf488;' }}" tap="{{ playPauseToggle }}" class="{{ isPlaying ? 'btn-icon-lg' : 'btn-icon-lg play' }}" />
+                    <Button text="&#xf427;" tap="{{ playNext }}" visibility="{{ isPlaying ? 'visible' : 'collapsed' }}" class="btn-icon" style="padding-left:2;" />
+                </StackLayout>
+                <StackLayout style="width:300;height:auto;">
+                    <Progress value="{{ position }}" maxValue="{{ duration }}" visibility="{{ (position) ? 'visible' : 'collapsed' }}" />
+                    <GridLayout columns="*,*" rows="auto">
+                        <Label text="{{ position, position | secondsToTimeConverter }}" style="text-align:left;" class="subtitle" col="0" visibility="{{ (position) ? 'visible' : 'collapsed' }}" />
+                        <Label text="{{ timeRemaining, timeRemaining | secondsToTimeConverter(true) }}" style="text-align:right;" class="subtitle" col="1" visibility="{{ (duration) ? 'visible' : 'collapsed' }}" />
+                    </GridLayout>
+                </StackLayout>
+            </StackLayout>
+        </StackLayout>
+        <GridLayout rows="*" columns="*, auto" class="bottomGrid" row="1">
+            <StackLayout orientation="horizontal" col="0">
+                <Button text="&#xf371;" tap="{{ stop }}" class="btn-icon" />
+            </StackLayout>
+            <StackLayout orientation="horizontal" col="1" style="horizontal-align:right;width:40%;">
+                <Button text="&#xf4cf;" tap="{{ toggleMute }}" class="btn-icon-lg" style="background-color: transparent;width:auto;height:auto;" />
+                <Slider minValue="0" maxValue="100" value="{{ currentVolume }}" propertyChange="{{ volumeSliderChange }}" />
+            </StackLayout>
+        </GridLayout>
+    </GridLayout>
+</Page>

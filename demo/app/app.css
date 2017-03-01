@@ -1,0 +1,54 @@
+﻿@import 'nativescript-theme-core/css/core.dark.css';
+
+Slider {
+    color: darkorange;
+    background-color: darkorange;
+    height:10;
+}
+
+Progress {
+    color: darkorange;
+}
+
+.subtitle {
+    color: #888;
+    font-size: 12;
+}
+
+.btn-icon, .btn-icon-sm, .btn-icon-lg {
+    font-family: 'Ionicons';
+    font-size: 30;
+    width: 40;
+    height: 40;
+    border-radius: 20;
+    background-color: rgba(0, 0, 0, 0.5);
+    text-align: center;
+    vertical-align: middle;
+    margin: 5;
+    color: #FFF;
+}
+
+.btn-icon-sm {
+    font-size: 16;
+    width: 24;
+    height: 24;
+    border-radius: 12;
+}
+
+.btn-icon-lg {
+    font-size: 56;
+    width: 80;
+    height: 80;
+    border-radius: 40;
+}
+
+.play {
+    padding-left: 5;
+}
+
+.bottomGrid {
+    background-color: #111;
+    padding: 10;
+    vertical-align: middle;
+    text-align: center;
+}

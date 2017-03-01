@@ -1,0 +1,9 @@
+demo/
+node_modules/
+screenshots/
+*.gif
+*.png
+*.log
+*.map
+*.ts
+!*.d.ts
