@@ -1,6 +1,6 @@
 export class Track {
-    constructor(public position: number,
-                public duration: number,
+    constructor(public position?: number,
+                public duration?: number,
                 public albumArtUrl?: string,
                 public albumArtUri?: string,
                 public uri?: string,
@@ -31,6 +31,28 @@ export class ZoneInfo {
                 public extraInfo?: any,
                 public htAudioIn?: boolean,
                 public flags?: boolean){}
+}
+
+export class SearchMusicResult {
+    constructor(public returned: number,
+                public total: number,
+                public items: Array<Track>){}
+}
+
+export class SonosTopology {
+    constructor(public zones?: any,
+                public mediaServers?: any){}
+}
+
+export enum SonosSearchType {
+    artists,
+    albumArtists,
+    albums,
+    genres,
+    composers,
+    tracks,
+    playlists,
+    share
 }
 
 export enum PlayModeEnum {

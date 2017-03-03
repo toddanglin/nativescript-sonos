@@ -7,7 +7,7 @@ export declare class Track {
     title: string;
     artist: string;
     album: string;
-    constructor(position: number, duration: number, albumArtUrl?: string, albumArtUri?: string, uri?: string, title?: string, artist?: string, album?: string);
+    constructor(position?: number, duration?: number, albumArtUrl?: string, albumArtUri?: string, uri?: string, title?: string, artist?: string, album?: string);
 }
 export declare class UriObject {
     uri: string;
@@ -32,6 +32,27 @@ export declare class ZoneInfo {
     htAudioIn: boolean;
     flags: boolean;
     constructor(serialNumber?: string, softwareVersion?: string, displaySoftwareVersion?: string, hardwareVersion?: string, ipAddress?: string, macAddress?: string, copyrightInfo?: string, extraInfo?: any, htAudioIn?: boolean, flags?: boolean);
+}
+export declare class SearchMusicResult {
+    returned: number;
+    total: number;
+    items: Array<Track>;
+    constructor(returned: number, total: number, items: Array<Track>);
+}
+export declare class SonosTopology {
+    zones: any;
+    mediaServers: any;
+    constructor(zones?: any, mediaServers?: any);
+}
+export declare enum SonosSearchType {
+    artists = 0,
+    albumArtists = 1,
+    albums = 2,
+    genres = 3,
+    composers = 4,
+    tracks = 5,
+    playlists = 6,
+    share = 7,
 }
 export declare enum PlayModeEnum {
     NORMAL = 0,
