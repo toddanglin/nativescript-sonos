@@ -1,6 +1,6 @@
 {
   "name": "nativescript-sonos",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Control Sonos systems from NativeScript apps",
   "main": "main",
   "typings": "index.d.ts",
