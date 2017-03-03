@@ -1,5 +1,5 @@
 import {Observable} from 'data/observable';
-import {Sonos, SonosState} from 'nativescript-sonos';
+import {Sonos, SonosState, SonosSearchType} from 'nativescript-sonos';
 import {PropertyChangeData} from 'data/observable';
 import {prompt} from "ui/dialogs";
 
@@ -280,6 +280,29 @@ export class HelloWorldModel extends Observable {
             })
             .catch((err) => {
                 this.title = err;
+            })
+    }
+
+    public search() {
+        this.sonos.getMusicLibrary(SonosSearchType.genres)
+            .then((result) => {
+                alert(`Search Success\n\nThere are ${result.total} generes in your Sonos music library.`);
+            })
+            .catch((err) => {
+                console.warn("Search Error: "+ err);
+                alert(`Search Error\n\nHmm. Something didn't work during the search. Please review the error logs.`);
+            })
+    }
+
+    public getQueue() {
+        this.sonos.getQueue()
+            .then((result) => {
+                console.log("QUEUE SUCCESS: "+ JSON.stringify(result));
+                alert(`Get Queue Success\n\nThere are ${result.total} items in the queue.`);
+            })
+            .catch((err) => {
+                console.warn("Get Queue Error: "+ err);
+                alert(`Get Queue Error\n\nHmm. Something didn't work as expected. Please review the error logs.`);
             })
     }
 

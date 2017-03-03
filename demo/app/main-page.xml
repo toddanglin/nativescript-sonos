@@ -30,6 +30,8 @@
         <GridLayout rows="*" columns="*, auto" class="bottomGrid" row="1">
             <StackLayout orientation="horizontal" col="0">
                 <Button text="&#xf371;" tap="{{ stop }}" class="btn-icon" />
+                <Button text="&#xf4a4;" tap="{{ search }}" class="btn-icon" />
+                <Button text="Get Queue" tap="{{ getQueue }}" class="btn" />
             </StackLayout>
             <StackLayout orientation="horizontal" col="1" style="horizontal-align:right;width:40%;">
                 <Button text="&#xf4cf;" tap="{{ toggleMute }}" class="btn-icon-lg" style="background-color: transparent;width:auto;height:auto;" />
