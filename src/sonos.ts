@@ -1,5 +1,6 @@
 let xml2js = require("nativescript-xml2js");
-import { Track, UriObject, PlayModeEnum, SonosState, ZoneAttributes, ZoneInfo } from "./sonos.model";
+import { Track, UriObject, PlayModeEnum, SonosState, ZoneAttributes, ZoneInfo, SearchMusicResult, SonosTopology, SonosSearchType } from "./sonos.model";
+import { ContentDirectory } from "./services/sonos-services";
 import * as trace from "trace";
 import * as http from "http";
 import * as _ from "underscore";
@@ -103,7 +104,7 @@ export class Sonos {
                         return;
                     }
 
-                   trace.write(`Sonos currentTrack Result: ${JSON.stringify(data)}`, trace.categories.All, trace.messageType.info);
+                    trace.write(`Sonos currentTrack Result: ${JSON.stringify(data)}`, trace.categories.All, trace.messageType.info);
 
                     let metadata = data[0].TrackMetaData;
                     let position = (parseInt(data[0].RelTime[0].split(":")[0], 10) * 60 * 60) +
@@ -122,10 +123,6 @@ export class Sonos {
 
                             let track = new Track(position, duration);
                             this.parseDIDL(track, data);
-
-                            track.albumArtUrl = !track.albumArtUri ? null
-                                : (track.albumArtUri.indexOf("http") === 0) ? track.albumArtUri
-                                    : `http://${this.host}:${this.port}${track.albumArtUri}`;
 
                             if (trackUri) track.uri = trackUri;
 
@@ -469,7 +466,7 @@ export class Sonos {
                             let propName = d.charAt(0).toLowerCase() + d.slice(1);
 
                             // Handle some known edge cases
-                            switch(propName) {
+                            switch (propName) {
                                 case "mACAddress":
                                     propName = "macAddress";
                                     break;
@@ -518,6 +515,98 @@ export class Sonos {
     }
 
     /**
+     * Get the LED State
+     * @returns  {Promise<boolean>} True for light "On", False for light "Off"
+     */
+    public getLEDState = (): Promise<boolean> => {
+        let action = '"urn:schemas-upnp-org:service:DeviceProperties:1#GetLEDState"';
+        let body = '<u:GetLEDState xmlns:u="urn:schemas-upnp-org:service:DeviceProperties:1"></u:GetLEDState>';
+
+        return new Promise((resolve, reject) => {
+            this.request(this.options.endpoints.device, action, body, 'u:GetLEDStateResponse')
+                .then((data) => {
+                    if (data[0] && data[0].CurrentLEDState && data[0].CurrentLEDState[0]) {
+                        resolve((data[0].CurrentLEDState[0] === "On") ? true : false);
+                    } else {
+                        throw new Error("Unrecognized LED state response");
+                    }
+                })
+                .catch((err) => {
+                    let errMsg = `Sonos getLEDState Error: ${err}`;
+                    trace.write(errMsg, trace.categories.Error, trace.messageType.error);
+                    reject(errMsg);
+                });
+        });
+    }
+
+    /**
+     * Set the LED State
+     * @param  {boolean}   desiredState True to turn LED "On", False to turn LED "Off"
+     * @returns  {Promise<void>} Resolves when request complete
+     */
+    public setLEDState = (setStateOn: boolean): Promise<void> => {
+        let action = '"urn:schemas-upnp-org:service:DeviceProperties:1#SetLEDState"';
+        let body = `<u:SetLEDState xmlns:u="urn:schemas-upnp-org:service:DeviceProperties:1"><DesiredLEDState>${(setStateOn ? "On" : "Off")}</DesiredLEDState></u:SetLEDState>`;
+
+        return new Promise<void>((resolve, reject) => {
+            this.request(this.options.endpoints.device, action, body, 'u:SetLEDStateResponse')
+                .then(() => {
+                    resolve();
+                })
+                .catch((err) => {
+                    let errMsg = `Sonos setLEDState Error: ${err}`;
+                    trace.write(errMsg, trace.categories.Error, trace.messageType.error);
+                    reject(errMsg);
+                });
+        });
+    }
+
+    /**
+     * Get Zones in contact with current Zone with Group Data
+     * @returns {Promise<SonosTopology>} Object describing available zones and media servers
+     */
+    public getTopology = (): Promise<SonosTopology> => {
+        return new Promise((resolve, reject) => {
+            fetch(`http://${this.host}:${this.port}/status/topology`)
+                .then((response) => {
+                    if (!response.ok) {
+                        throw new Error(`Network error getting Sonos topology: ${response.statusText}`);
+                    }
+                    return response.text();
+                })
+                .then((data) => {
+                    xml2js.parseString(data, (error, topology) => {
+                        if (error) {
+                            throw new Error(`Error parsing Sonos topology XML: ${error}`);
+                        }
+
+                        let info = topology.ZPSupportInfo;
+                        let zones = null;
+                        let mediaServers = null;
+                        if (info.ZonePlayers && info.ZonePlayers.length > 0) {
+                            zones = _.map(info.ZonePlayers[0].ZonePlayer, function (zone) {
+                                return _.extend(zone.$, { name: zone._ });
+                            });
+                        }
+                        if (info.MediaServers && info.MediaServers.length > 0) {
+                            mediaServers = _.map(info.MediaServers[0].MediaServer, function (zone) {
+                                return _.extend(zone.$, { name: zone._ });
+                            });
+                        }
+
+                        let result = new SonosTopology(zones, mediaServers);
+                        resolve(result);
+                    });
+                })
+                .catch((err) => {
+                    let errMsg = `Sonos getTopology Error: ${err}`;
+                    trace.write(errMsg, trace.categories.Error, trace.messageType.error);
+                    reject(errMsg);
+                });
+        });
+    }
+
+    /**
      * Get Information provided by /xml/device_description.xml
      * @returns  {Promise<any>} Device details JSON from /xml/device_description.xml
      */
@@ -553,102 +642,199 @@ export class Sonos {
         });
     }
 
-
-
     /**
    * Get Music Library Information
-   * @param  {String}   searchType  Choice - artists, albumArtists, albums, genres, composers, tracks, playlists, share
+   * @param  {SonosSearchType}   searchType  Choice - artists, albumArtists, albums, genres, composers, tracks, playlists, share
    * @param  {Object}   options     Optional - default {start: 0, total: 100}
-   * @param  {Function} callback (err, result) result - {returned: {String}, total: {String}, items:[{title:{String}, uri: {String}}]}
+   * @returns  {Promise<SearchMusicResult>} result - {returned: {String}, total: {String}, items:[{title:{String}, uri: {String}}]}
    */
-    /*public getMusicLibrary = (searchType, options): Promise<any> => {
-        return this.searchMusicLibrary(searchType, null, options);
-    }*/
+    public getMusicLibrary = (searchType: SonosSearchType, startIndex = 0, pageSize = 100): Promise<SearchMusicResult> => {
+        return this.searchMusicLibrary(searchType, null, startIndex, pageSize);
+    }
 
     /**
  * Get Music Library Information
  * @param  {String}   searchType  Choice - artists, albumArtists, albums, genres, composers, tracks, playlists, share
  * @param  {String}   searchTerm  Optional - search term to search for
  * @param  {Object}   options     Optional - default {start: 0, total: 100}
- * @param  {Function} callback (err, result) result - {returned: {String}, total: {String}, items:[{title:{String}, uri: {String}}]}
+ * @returns  {Promise<SearchMusicResult>} Contains number of items search returned, total match count and array of Track details
  */
-    /*public searchMusicLibrary = (searchType, searchTerm, options): Promise<any> => {
-         let searches = {
-             "artists": "A:ARTIST",
-             "albumArtists": "A:ALBUMARTIST",
-             "albums": "A:ALBUM",
-             "genres": "A:GENRE",
-             "composers": "A:COMPOSER",
-             "tracks": "A:TRACKS",
-             "playlists": "A:PLAYLISTS",
-             "sonos_playlists": "SQ:",
-             "share": "S:"
-         }
-         let defaultOptions = {
-             BrowseFlag: "BrowseDirectChildren",
-             Filter: "*",
-             StartingIndex: "0",
-             RequestedCount: "100",
-             SortCriteria: ""
-         }
-         searches = searches[searchType]
- 
-         let opensearch = (!searchTerm) || (searchTerm === "")
-         if (!opensearch) searches = searches.concat(":" + searchTerm)
- 
-         let opts = {
-             ObjectID: searches
-         }
-         if (options.start !== undefined) opts["StartingIndex"] = options.start
-         if (options.total !== undefined) opts["RequestedCount"] = options.total
- 
-         opts = _.extend(defaultOptions, opts)
- 
-         var contentDirectory = new Services.ContentDirectory(this.host, this.port)
- 
-         contentDirectory.Browse(opts)
-             .then(data => {
-             return (new xml2js.Parser()).parseString(data.Result, function (err, didl) {
-                 if (err) return callback(err, data)
-                 var items = []
-                 if ((!didl) || (!didl["DIDL-Lite"])) {
-                     return callback(new Error("Cannot parse DIDTL result"), data)
-                 }
-                 var resultcontainer = opensearch ? didl["DIDL-Lite"].container : didl["DIDL-Lite"].item
-                 if (!Array.isArray(resultcontainer)) {
-                     return callback(new Error("Cannot parse DIDTL result"), data)
-                 }
-                 _.each(resultcontainer, function (item) {
-                     var albumArtURL = null
-                     if (Array.isArray(item["upnp:albumArtURI"])) {
-                         if (item["upnp:albumArtURI"][0].indexOf("http") !== -1) {
-                             albumArtURL = item["upnp:albumArtURI"][0]
-                         } else {
-                             albumArtURL = "http://" + self.host + ":" + self.port + item["upnp:albumArtURI"][0]
-                         }
-                     }
-                     items.push({
-                         "title": Array.isArray(item["dc:title"]) ? item["dc:title"][0] : null,
-                         "artist": Array.isArray(item["dc:creator"]) ? item["dc:creator"][0] : null,
-                         "albumArtURL": albumArtURL,
-                         "album": Array.isArray(item["upnp:album"]) ? item["upnp:album"][0] : null,
-                         "uri": Array.isArray(item.res) ? item.res[0]._ : null
-                     })
-                 })
-                 var result = {
-                     returned: data.NumberReturned,
-                     total: data.TotalMatches,
-                     items: items
-                 }
-                 return callback(null, result)
-             })
-         })
-    }*/
+    public searchMusicLibrary = (searchType: SonosSearchType, searchTerm: string, startIndex = 0, pageSize = 100): Promise<SearchMusicResult> => {
+        let searchTypes = {
+            "artists": "A:ARTIST",
+            "albumArtists": "A:ALBUMARTIST",
+            "albums": "A:ALBUM",
+            "genres": "A:GENRE",
+            "composers": "A:COMPOSER",
+            "tracks": "A:TRACKS",
+            "playlists": "A:PLAYLISTS",
+            "sonos_playlists": "SQ:",
+            "share": "S:"
+        }
+
+        let search = searchTypes[SonosSearchType[searchType]];
+
+        // If no searchTerm, then perform "open search" within type
+        let opensearch = (!searchTerm) || (searchTerm === "");
+        if (!opensearch) {
+            // Add searchTerm to selected searchType
+            search = search.concat(":" + searchTerm);
+        }
+
+        let options = {
+            start: startIndex,
+            total: pageSize
+        };
+
+        return this.contentSearch(search, options, opensearch);
+    }
+
+    /**
+     * Get Favorites Radio Stations
+     * @param  {Object}   options     Optional - default {start: 0, total: 100}
+     * @returns  {Promise<SearchMusicResult>} result - {returned: {String}, total: {String}, items:[{title:{String}, uri: {String}}]}
+     */
+    public getFavoritesRadioStations = (startIndex = 0, pageSize = 100): Promise<SearchMusicResult> => {
+        return this.getFavoritesRadio("stations", startIndex, pageSize);
+    }
+    /**
+     * Get Favorites Radio Shows
+     * @param  {Object}   options     Optional - default {start: 0, total: 100}
+     * @returns  {Promise<SearchMusicResult>} result - {returned: {String}, total: {String}, items:[{title:{String}, uri: {String}}]}
+     */
+    public getFavoritesRadioShows = (startIndex = 0, pageSize = 100): Promise<SearchMusicResult> => {
+        return this.getFavoritesRadio("shows", startIndex, pageSize);
+    }
+
+    /**
+     * Get Favorites Radio for a given radio type
+     * @param  {String}   favoriteRadioType  Choice - stations, shows
+     * @param  {Object}   options     Optional - default {start: 0, total: 100}
+     * @returns  {Promise<SearchMusicResult>} result - {returned: {String}, total: {String}, items:[{title:{String}, uri: {String}}]}
+     */
+    public getFavoritesRadio = (favoriteRadioType, startIndex = 0, pageSize = 100): Promise<SearchMusicResult> => {
+        let radioTypes = {
+            "stations": "R:0/0",
+            "shows": "R:0/1"
+        }
+
+        let options = {
+            start: startIndex,
+            total: pageSize
+        };
+
+        return this.contentSearch(radioTypes[favoriteRadioType], options);
+    }
+
+    // Get default queue
+    public getQueue = (): Promise<SearchMusicResult> => {
+        return this.contentSearch("Q:0", {});
+    }
+
+    /**
+     * Plays tunein based on radio station id
+     * @param  {String}   stationId  tunein radio station id
+     * @returns  {Promise<boolean>} Playing
+     */
+    public playTuneinRadio = (stationId, stationTitle): Promise<boolean> => {
+        return new Promise((resolve, reject) => {
+            if (!stationId || !stationTitle) {
+                return reject("stationId and stationTitle are required");
+            }
+
+            let metadata = `<DIDL-Lite xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:upnp="urn:schemas-upnp-org:metadata-1-0/upnp/" ` +
+                            `xmlns:r="urn:schemas-rinconnetworks-com:metadata-1-0/" xmlns="urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/">` +
+                            `<item id="F00092020s${stationId} parentID="L" restricted="true"><dc:title>${stationTitle}</dc:title>` +
+                            `<upnp:class>object.item.audioItem.audioBroadcast</upnp:class><desc id="cdudn" nameSpace="urn:schemas-rinconnetworks-com:metadata-1-0/">` +
+                            `SA_RINCON65031_</desc></item></DIDL-Lite>`;
+
+            let action = '"urn:schemas-upnp-org:service:AVTransport:1#SetAVTransportURI"';
+            let body = `<u:SetAVTransportURI xmlns:u="urn:schemas-upnp-org:service:AVTransport:1"><InstanceID>0</InstanceID>`+
+                        `<CurrentURI>x-sonosapi-stream:s${stationId}?sid=254&amp;flags=8224&amp;sn=0</CurrentURI>` +
+                        `<CurrentURIMetaData>${this.htmlEntities(metadata)}</CurrentURIMetaData></u:SetAVTransportURI>`;
+
+            this.request(this.options.endpoints.transport, action, body, 'u:SetAVTransportURIResponse')
+                .then((data) => {
+                    if (data[0].$['xmlns:u'] === 'urn:schemas-upnp-org:service:AVTransport:1') {
+                        return this.play();
+                    } else {
+                        throw new Error(`Unable to play TuneIn Radio (Data: ${JSON.stringify(data)} )`);
+                    }
+                })
+                .catch((err) => {
+                    let errMsg = `Sonos playTuneinRadio Error: ${err}`;
+                    trace.write(errMsg, trace.categories.Error, trace.messageType.error);
+                    reject(errMsg);
+                });
+        });
+    }
+
+    /**
+     * Add a song from spotify to the queue
+     * @param  {String}   trackId      The spotify track ID
+     * @returns {Promise<any>} Sucess
+     */
+    public addSpotify = (trackId): Promise<any> => {
+        let uri = `x-sonos-spotify:spotify%3atrack%3a${trackId}`;
+        let meta = `<DIDL-Lite xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:upnp="urn:schemas-upnp-org:metadata-1-0/upnp/" ` +
+                    `xmlns:r="urn:schemas-rinconnetworks-com:metadata-1-0/" xmlns="urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/">` +
+                    `<item id="00032020spotify%3atrack%3a${trackId}" restricted="true"><dc:title></dc:title>` +
+                    `<upnp:class>object.item.audioItem.musicTrack</upnp:class><desc id="cdudn" nameSpace="urn:schemas-rinconnetworks-com:metadata-1-0/">` +
+                    `SA_RINCON3079_X_#Svc3079-0-Token</desc></item></DIDL-Lite>`;
+
+        return this.queue({ uri: uri, metadata: meta });
+    }
+
+    /**
+     * Plays Spotify radio based on artist uri
+     * @param  {String}   artistId  Spotify artist id
+     * @returns {Promise<boolean>} True if success playing
+     */
+    public playSpotifyRadio = (artistId, artistName): Promise<boolean> => {
+        return new Promise((resolve, reject) => {
+            if (!artistId || !artistName) {
+               return reject("artistId and artistName are required");
+            }
+            let options = this.optionsFromSpotifyUri(`spotify:artistRadio:${artistId}`, artistName)
+            let action = '"urn:schemas-upnp-org:service:AVTransport:1#SetAVTransportURI"';
+            let body = `<u:SetAVTransportURI xmlns:u="urn:schemas-upnp-org:service:AVTransport:1"><InstanceID>0</InstanceID>` +
+                        `<CurrentURI>x-sonosapi-radio:${options.uri}?sid=12&amp;flags=8300&amp;sn=1</CurrentURI>` +
+                        `<CurrentURIMetaData>${this.htmlEntities(options.metadata)}</CurrentURIMetaData></u:SetAVTransportURI>`;
+
+            this.request(this.options.endpoints.transport, action, body, 'u:SetAVTransportURIResponse')
+                .then((data) => {
+                    if (data[0].$["xmlns:u"] === "urn:schemas-upnp-org:service:AVTransport:1") {
+                        return this.play()
+                    } else {
+                       throw new Error(`Unable to play Spotify Radio (Data: ${JSON.stringify(data)} )`);
+                    }
+                })
+                .catch((err) => {
+                    let errMsg = `Sonos playSpotifyRadio Error: ${err}`;
+                    trace.write(errMsg, trace.categories.Error, trace.messageType.error);
+                    reject(errMsg);
+                });
+        });
+    }
+
+
+    // Add Spotify track to the queue.
+    public addSpotifyQueue = (trackId): Promise<any> => {
+        let rand = "00030020";
+        let uri = `x-sonos-spotify:spotify%3atrack%3a${trackId}`;
+        let meta = `<DIDL-Lite xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:upnp="urn:schemas-upnp-org:metadata-1-0/upnp/" ` +
+                    `xmlns:r="urn:schemas-rinconnetworks-com:metadata-1-0/" xmlns="urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/">` +
+                    `<item id="${rand}spotify%3atrack%3a${trackId}" restricted="true"><dc:title></dc:title><upnp:class>` +
+                    `object.item.audioItem.musicTrack</upnp:class><desc id="cdudn" nameSpace="urn:schemas-rinconnetworks-com:metadata-1-0/">` +
+                    `SA_RINCON2311_X_#Svc2311-0-Token</desc></item></DIDL-Lite>`;
+
+        return this.queue({ uri: uri, metadata: meta });
+    }
+
 
     /**
     * Helpers
     */
-
     private executeTransportRequest = (action: string, body: string, responseTag: string): Promise<boolean> => {
         return new Promise((resolve, reject) => {
             this.request(this.options.endpoints.transport, action, body, responseTag)
@@ -680,22 +866,99 @@ export class Sonos {
         });
     }
 
+    private contentSearch = (searchObject: string, options: any, useResultContainer = false): Promise<SearchMusicResult> => {
+        let defaultOptions = {
+            BrowseFlag: "BrowseDirectChildren",
+            Filter: "*",
+            StartingIndex: "0",
+            RequestedCount: "100",
+            SortCriteria: ""
+        }
+        let opts = {
+            ObjectID: searchObject
+        }
+        if (options.start !== undefined) opts["StartingIndex"] = options.start;
+        if (options.total !== undefined) opts["RequestedCount"] = options.total;
+
+        opts = _.extend(defaultOptions, opts);
+
+        let contentDirectory = new ContentDirectory(this.host, this.port);
+
+        return new Promise((resolve, reject) => {
+            contentDirectory.browse(opts)
+                .then((data) => {
+                    xml2js.parseString(data.Result, (error, didl) => {
+                        if (error) {
+                            throw new Error(`Cannot parse contentSearch XML: ${error}`);
+                        }
+                        let items = new Array<Track>();
+
+                        if ((!didl) || (!didl["DIDL-Lite"])) {
+                            throw new Error(`Cannot parse DIDTL result: ${JSON.stringify(didl)}`);
+                        }
+
+                        let resultcontainer = useResultContainer ? didl["DIDL-Lite"].container : didl["DIDL-Lite"].item;
+                        if (!Array.isArray(resultcontainer)) {
+                            // Assume a missing container == empty results
+                            return resolve(new SearchMusicResult(0, 0, new Array<Track>()));
+                        }
+
+                        resultcontainer.forEach((item) => {
+                            let track = new Track();
+                            track = this.parseDIDL(track, item, useResultContainer, true);
+                            track.uri = Array.isArray(item.res) ? item.res[0]._ : null;
+
+                            items.push(track);
+                        })
+
+                        let result = new SearchMusicResult(data.NumberReturned, data.TotalMatches, items);
+
+                        resolve(result);
+                    });
+                })
+                .catch((err) => {
+                    let errMsg = `Sonos Search Music Library Error: ${err}`;
+                    trace.write(errMsg, trace.categories.Error, trace.messageType.error);
+                    reject(errMsg);
+                });
+        });
+    }
+
     /**
      * Parse DIDL into track structure
      * @param  {String} didl
      * @returns {object}
      */
-    private parseDIDL = (track: Track, didl: any): Track => {
-        if ((!didl) || (!didl["DIDL-Lite"]) || (!Array.isArray(didl["DIDL-Lite"].item)) || (!didl["DIDL-Lite"].item[0])) {
-            return track;
-        }
+    private parseDIDL = (track: Track, didl: any, useContainer = false, skipDIDLChecks = false): Track => {
+        let item: any;
+        if (!skipDIDLChecks) {
+            if ((!didl) || (!didl["DIDL-Lite"])) {
+                return track;
+            }
 
-        let item = didl["DIDL-Lite"].item[0];
+            if (useContainer) {
+                if (!Array.isArray(didl["DIDL-Lite"].container) || !didl["DIDL-Lite"].container[0]) {
+                    return track;
+                }
+            } else {
+                if (!Array.isArray(didl["DIDL-Lite"].item) || !didl["DIDL-Lite"].item[0]) {
+                    return track;
+                }
+            }
+
+            item = useContainer ? didl["DIDL-Lite"].container[0] : didl["DIDL-Lite"].item[0];
+        } else {
+            item = didl;
+        }
 
         track.title = Array.isArray(item["dc:title"]) ? item["dc:title"][0] : null;
         track.artist = Array.isArray(item["dc:creator"]) ? item["dc:creator"][0] : null;
         track.album = Array.isArray(item["upnp:album"]) ? item["upnp:album"][0] : null;
         track.albumArtUri = Array.isArray(item["upnp:albumArtURI"]) ? item["upnp:albumArtURI"][0] : null;
+
+        track.albumArtUrl = !track.albumArtUri ? null
+            : (track.albumArtUri.indexOf("http") === 0) ? track.albumArtUri
+                : `http://${this.host}:${this.port}${track.albumArtUri}`;
 
         return track;
     }
@@ -754,7 +1017,7 @@ export class Sonos {
                 metadata: meta.replace("##SPOTIFYURI##", "0006206c" + spotifyUri).replace("##RESOURCETITLE##", "").replace("##SPOTIFYTYPE##", "object.container.playlistContainer")
             }
         } else if (uri.startsWith("spotify:artistRadio:")) {
-            var radioTitle = (title !== undefined) ? title : "Artist Radio";
+            let radioTitle = (title !== undefined) ? title : "Artist Radio";
             return {
                 uri: spotifyUri,
                 metadata: '<DIDL-Lite xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:upnp="urn:schemas-upnp-org:metadata-1-0/upnp/" xmlns:r="urn:schemas-rinconnetworks-com:metadata-1-0/" xmlns="urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/"><item id="000c206c' + spotifyUri + '" restricted="true"><dc:title>' + radioTitle + '</dc:title><upnp:class>object.item.audioItem.audioBroadcast.#artistRadio</upnp:class><desc id="cdudn" nameSpace="urn:schemas-rinconnetworks-com:metadata-1-0/">SA_RINCON3079_X_#Svc3079-0-Token</desc></item></DIDL-Lite>'

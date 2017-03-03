@@ -1,4 +1,4 @@
-import { Track, UriObject, PlayModeEnum, SonosState, ZoneAttributes, ZoneInfo } from "./sonos.model";
+import { Track, UriObject, PlayModeEnum, SonosState, ZoneAttributes, ZoneInfo, SearchMusicResult, SonosTopology, SonosSearchType } from "./sonos.model";
 export declare class Sonos {
     private TRANSPORT_ENDPOINT;
     private RENDERING_ENDPOINT;
@@ -29,9 +29,23 @@ export declare class Sonos {
     getCurrentState: () => Promise<SonosState>;
     getZoneInfo: () => Promise<ZoneInfo>;
     getZoneAttrs: () => Promise<ZoneAttributes>;
+    getLEDState: () => Promise<boolean>;
+    setLEDState: (setStateOn: boolean) => Promise<void>;
+    getTopology: () => Promise<SonosTopology>;
     deviceDescription: () => Promise<any>;
+    getMusicLibrary: (searchType: SonosSearchType, startIndex?: number, pageSize?: number) => Promise<SearchMusicResult>;
+    searchMusicLibrary: (searchType: SonosSearchType, searchTerm: string, startIndex?: number, pageSize?: number) => Promise<SearchMusicResult>;
+    getFavoritesRadioStations: (startIndex?: number, pageSize?: number) => Promise<SearchMusicResult>;
+    getFavoritesRadioShows: (startIndex?: number, pageSize?: number) => Promise<SearchMusicResult>;
+    getFavoritesRadio: (favoriteRadioType: any, startIndex?: number, pageSize?: number) => Promise<SearchMusicResult>;
+    getQueue: () => Promise<SearchMusicResult>;
+    playTuneinRadio: (stationId: any, stationTitle: any) => Promise<boolean>;
+    addSpotify: (trackId: any) => Promise<any>;
+    playSpotifyRadio: (artistId: any, artistName: any) => Promise<boolean>;
+    addSpotifyQueue: (trackId: any) => Promise<any>;
     private executeTransportRequest;
     private executeRequest;
+    private contentSearch;
     private parseDIDL;
     private withinEnvelope;
     private htmlEntities;
