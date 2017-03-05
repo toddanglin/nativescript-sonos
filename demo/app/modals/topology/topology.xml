@@ -1,0 +1,30 @@
+<Page xmlns="http://schemas.nativescript.org/tns.xsd"
+  shownModally="loaded" style="background-color:#333;height:100%;width:100%;"
+  xmlns:PullRefresh="nativescript-pulltorefresh">
+  <StackLayout>
+    <DockLayout stretchLastChild="false" style="background-color:#000;color:#FFF;margin-bottom:10;">
+        <GridLayout dock="top" columns="75,*,75" rows="50" style="text-align:center;vertical-align:middle;">
+            <Label text="Sonos Topology" col="1" />
+            <Button text="Done" col="2" tap="{{ closeWindow }}" />
+        </GridLayout>
+    </DockLayout>
+    <StackLayout>
+        <Label text="Devices:" class="h3" style="margin:0 0 0 15;" />
+        <PullRefresh:PullToRefresh refresh="manualRefreshTopology">
+        <ScrollView class="scrollZones">
+            <Repeater items="{{ zones }}">
+                <Repeater.itemsLayout>
+                    <StackLayout class="stackZones" />
+                </Repeater.itemsLayout>
+                <Repeater.itemTemplate>
+                    <StackLayout class="zone" style="width:100%;">
+                        <Label text="{{ name }}" class="zoneName" />
+                        <Label text="{{ location }}" class="zoneLocation" />
+                    </StackLayout>
+                </Repeater.itemTemplate>
+            </Repeater>
+        </ScrollView>
+        </PullRefresh:PullToRefresh>
+    </StackLayout>
+  </StackLayout>
+</Page>

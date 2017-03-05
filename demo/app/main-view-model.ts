@@ -1,7 +1,9 @@
-import {Observable} from 'data/observable';
-import {Sonos, SonosState, SonosSearchType} from 'nativescript-sonos';
-import {PropertyChangeData} from 'data/observable';
-import {prompt} from "ui/dialogs";
+import { Page} from "ui/page";
+import { Sonos, SonosState, SonosSearchType } from "nativescript-sonos";
+import { Observable, PropertyChangeData, EventData } from "data/observable";
+import { prompt } from "ui/dialogs";
+import { Button } from "ui/button";
+import { topmost } from "ui/frame";
 
 export class HelloWorldModel extends Observable {
     private _message: string;
@@ -304,6 +306,25 @@ export class HelloWorldModel extends Observable {
                 console.warn("Get Queue Error: "+ err);
                 alert(`Get Queue Error\n\nHmm. Something didn't work as expected. Please review the error logs.`);
             })
+    }
+
+    public getTopology(args: EventData) {
+        let obj = <Button>args.object;
+        let page = <Page>topmost().currentPage;
+
+        page.showModal("./modals/topology/topology", this.sonosIp, () => { return; });
+    }
+
+    public getDescription() {
+        this.sonos.deviceDescription()
+            .then((result) => {
+                console.log(`GET DESCRIPTION SUCCESS: ${JSON.stringify(result)}`);
+                alert(`Get Description Success\n\nDevice in ${result.roomName} has serial no: ${result.serialNum}`);
+            })
+            .catch((err) => {
+                console.warn("Get Description Error: "+ err);
+                alert(`Get Description Error\n\nThat didn't work. Please review the error logs and try again.`);
+            });
     }
 
     public secondsToTimeConverter = {
