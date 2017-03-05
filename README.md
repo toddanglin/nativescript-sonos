@@ -37,27 +37,40 @@ this.sonos.play()
 This plugin does not yet support all of the methods from the [original NodeJS library](https://github.com/bencevans/node-sonos). Currently implemented methods are:
 
 - currentTrack: () => Promise<Track>;
+- selectTrack: (trackNr?: number) => Promise<boolean>;
 - getVolume: () => Promise<number>;
+- setVolume: (volume: number) => Promise<any>;
 - getMuted: () => Promise<boolean>;
+- setMuted: (muted: boolean) => Promise<any>;
 - play: (uri?: string | UriObject) => Promise<boolean>;
 - stop: () => Promise<boolean>;
 - pause: () => Promise<boolean>;
-- flush: () => Promise<any>;
-- becomeCoordinatorOfStandaloneGroup: () => Promise<boolean>;
-- seek: (seconds: any) => Promise<boolean>;
+- seek: (seconds: number) => Promise<boolean>;
 - next: () => Promise<boolean>;
 - previous: () => Promise<boolean>;
+- flush: () => Promise<any>;
+- becomeCoordinatorOfStandaloneGroup: () => Promise<boolean>;
 - setName: (name: any) => Promise<any>;
 - setPlayMode: (playmode: PlayModeEnum) => Promise<any>;
-- setVolume: (volume: number) => Promise<any>;
-- setMuted: (muted: boolean) => Promise<any>;
-- selectTrack: (trackNr?: number) => Promise<boolean>;
 - selectQueue: () => Promise<boolean>;
 - queue: (uri: string | UriObject, positionInQueue?: number) => Promise<any>;
 - getCurrentState: () => Promise<SonosState>;
 - getZoneInfo: () => Promise<ZoneInfo>;
 - getZoneAttrs: () => Promise<ZoneAttributes>;
+- getLEDState: () => Promise<boolean>;
+- setLEDState: (setStateOn: boolean) => Promise<void>;
+- getTopology: () => Promise<SonosTopology>;
 - deviceDescription: () => Promise<any>;
+- getQueue: () => Promise<SearchMusicResult>;
+- getMusicLibrary: (searchType: SonosSearchType, startIndex?: number, pageSize?: number) => Promise<SearchMusicResult>;
+- searchMusicLibrary: (searchType: SonosSearchType, searchTerm: string, startIndex?: number, pageSize?: number) => Promise<SearchMusicResult>;
+- getFavoritesRadioStations: (startIndex?: number, pageSize?: number) => Promise<SearchMusicResult>;
+- getFavoritesRadioShows: (startIndex?: number, pageSize?: number) => Promise<SearchMusicResult>;
+- getFavoritesRadio: (favoriteRadioType: any, startIndex?: number, pageSize?: number) => Promise<SearchMusicResult>;
+- playTuneinRadio: (stationId: any, stationTitle: any) => Promise<boolean>;
+- addSpotify: (trackId: any) => Promise<any>;
+- playSpotifyRadio: (artistId: any, artistName: any) => Promise<boolean>;
+- addSpotifyQueue: (trackId: any) => Promise<any>;
 
 ## Sonos device discovery APIs
 This plugin does not yet support the Discovery APIs (allowing you to automatially locate Sonos devices on the network) due to the lack of support in NativeScript for UDP socket connections.
