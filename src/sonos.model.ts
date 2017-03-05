@@ -40,8 +40,38 @@ export class SearchMusicResult {
 }
 
 export class SonosTopology {
-    constructor(public zones?: any,
-                public mediaServers?: any){}
+    constructor(public zones?: Array<SonosZone>,
+                public mediaServers?: Array<SonosMediaServer>){}
+}
+
+export class SonosZone {
+    constructor(public group?: string,
+                public coordinator?: boolean,
+                public wirelessMode?: number,
+                public wirelessLeafOnly?: number,
+                public hasConfiguredSSID?: boolean,
+                public channelFreq?: number,
+                public behindWifiExt?: boolean,
+                public wifiEnabled?: boolean,
+                public location?: string,
+                public version?: string,
+                public minCompatibleVersion?: string,
+                public legacyCompatibleVersion?: string,
+                public bootSeq?: number,
+                public uuid?: string,
+                public name?: string){}
+                
+}
+
+export class SonosMediaServer {
+    constructor(public location?: string,
+                public uuid?: string,
+                public version?: string,
+                public canBeDisplayed?: boolean,
+                public unavailable?: boolean,
+                public type?: number,
+                public ext?: string,
+                public name?: string){}
 }
 
 export enum SonosSearchType {

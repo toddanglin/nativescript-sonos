@@ -1,5 +1,5 @@
 let xml2js = require("nativescript-xml2js");
-import { Track, UriObject, PlayModeEnum, SonosState, ZoneAttributes, ZoneInfo, SearchMusicResult, SonosTopology, SonosSearchType } from "./sonos.model";
+import { Track, UriObject, PlayModeEnum, SonosState, ZoneAttributes, ZoneInfo, SearchMusicResult, SonosTopology, SonosSearchType, SonosZone, SonosMediaServer } from "./sonos.model";
 import { ContentDirectory } from "./services/sonos-services";
 import * as trace from "trace";
 import * as http from "http";
@@ -581,16 +581,54 @@ export class Sonos {
                         }
 
                         let info = topology.ZPSupportInfo;
-                        let zones = null;
-                        let mediaServers = null;
+                        let zones = new Array<SonosZone>();
+                        let mediaServers = new Array<SonosMediaServer>();
                         if (info.ZonePlayers && info.ZonePlayers.length > 0) {
                             zones = _.map(info.ZonePlayers[0].ZonePlayer, function (zone) {
-                                return _.extend(zone.$, { name: zone._ });
+                                let newZone = new SonosZone();
+                                newZone.name = zone._;
+                                for (let p in newZone) {
+                                    let lowerProp = p.toLowerCase();
+                                    if (zone.$.hasOwnProperty(lowerProp)) {
+                                        // Some extra handling for type conversion
+                                        let propValue = zone.$[lowerProp];
+                                        switch(lowerProp) {
+                                            case "coordinator":
+                                                propValue = (propValue === "true") ? true : false;
+                                                break;
+                                            case "wifienabled":
+                                            case "wirelessleafonly":
+                                            case "hasconfiguredssid":
+                                            case "behindwifiext":
+                                                propValue = (propValue === "1") ? true : false;
+                                                break;
+                                        }
+                                        newZone[p] = propValue;
+                                    }
+                                }
+
+                                return newZone;
                             });
                         }
                         if (info.MediaServers && info.MediaServers.length > 0) {
-                            mediaServers = _.map(info.MediaServers[0].MediaServer, function (zone) {
-                                return _.extend(zone.$, { name: zone._ });
+                            mediaServers = _.map(info.MediaServers[0].MediaServer, function (server) {
+                                let newServer = new SonosMediaServer();
+                                newServer.name = server._;
+                                for (let p in newServer) {
+                                    let lowerProp = p.toLowerCase();
+                                    if (server.$.hasOwnProperty(lowerProp)) {
+                                        // Some extra processing for boolean type conversion
+                                        let propValue = server.$[lowerProp];
+                                        switch(lowerProp) {
+                                            case "canbedisplayed":
+                                            case "unavailable":
+                                                propValue = (propValue === "true") ? true : false;
+                                        }
+                                        newServer[p] = propValue;
+                                    }
+                                }
+
+                                return newServer;  
                             });
                         }
 

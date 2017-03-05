@@ -81,9 +81,38 @@ export declare class SearchMusicResult {
     constructor(returned: number, total: number, items: Array<Track>);
 }
 export declare class SonosTopology {
-    zones: any;
-    mediaServers: any;
-    constructor(zones?: any, mediaServers?: any);
+    zones: Array<SonosZone>;
+    mediaServers: Array<SonosMediaServer>;
+    constructor(zones?: Array<SonosZone>, mediaServers?: Array<SonosMediaServer>);
+}
+export declare class SonosZone {
+    group: string;
+    coordinator: boolean;
+    wirelessMode: number;
+    wirelessLeafOnly: number;
+    hasConfiguredSSID: boolean;
+    channelFreq: number;
+    behindWifiExt: boolean;
+    wifiEnabled: boolean;
+    location: string;
+    version: string;
+    minCompatibleVersion: string;
+    legacyCompatibleVersion: string;
+    bootSeq: number;
+    uuid: string;
+    name: string;
+    constructor(group?: string, coordinator?: boolean, wirelessMode?: number, wirelessLeafOnly?: number, hasConfiguredSSID?: boolean, channelFreq?: number, behindWifiExt?: boolean, wifiEnabled?: boolean, location?: string, version?: string, minCompatibleVersion?: string, legacyCompatibleVersion?: string, bootSeq?: number, uuid?: string, name?: string);
+}
+export declare class SonosMediaServer {
+    location: string;
+    uuid: string;
+    version: string;
+    canBeDisplayed: boolean;
+    unavailable: boolean;
+    type: number;
+    ext: string;
+    name: string;
+    constructor(location?: string, uuid?: string, version?: string, canBeDisplayed?: boolean, unavailable?: boolean, type?: number, ext?: string, name?: string);
 }
 export declare enum SonosSearchType {
     artists = 0,
