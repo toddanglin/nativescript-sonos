@@ -12,17 +12,18 @@
         <Label text="Devices:" class="h3" style="margin:0 0 0 15;" />
         <PullRefresh:PullToRefresh refresh="manualRefreshTopology">
         <ScrollView class="scrollZones">
-            <Repeater items="{{ zones }}">
-                <Repeater.itemsLayout>
-                    <StackLayout class="stackZones" />
-                </Repeater.itemsLayout>
-                <Repeater.itemTemplate>
-                    <StackLayout class="zone" style="width:100%;">
-                        <Label text="{{ name }}" class="zoneName" />
-                        <Label text="{{ location }}" class="zoneLocation" />
-                    </StackLayout>
-                </Repeater.itemTemplate>
-            </Repeater>
+            <ListView items="{{ zones }}" itemTap="{{ onZoneTap }}" class="stackZones">
+                <ListView.itemTemplate>
+                    <GridLayout columns="50, *, auto">
+                        <Image src="{{ zone.location, zone.location | zoneIconUrlConverter(zone.description) }}" col="0" style="margin-right:5;" />
+                        <StackLayout class="zone" style="width:100%;" col="1">
+                            <Label text="{{ zone.name }}" class="zoneName" />
+                            <Label text="{{ zone.description.modelName }}" class="zoneLocation" />
+                        </StackLayout>
+                        <Label text="{{ (isSelected) ? '&#xf120;' : '' }}" class="selected" col="2" />
+                    </GridLayout>
+                </ListView.itemTemplate>
+            </ListView>
         </ScrollView>
         </PullRefresh:PullToRefresh>
     </StackLayout>

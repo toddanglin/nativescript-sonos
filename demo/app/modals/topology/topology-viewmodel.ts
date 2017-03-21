@@ -1,31 +1,88 @@
 import { Observable, PropertyChangeData, EventData } from "data/observable";
 import { StackLayout } from "ui/layouts/stack-layout";
 import * as trace from 'trace';
-import { SonosZone } from "nativescript-sonos";
+import * as app from 'application';
+import { SonosZone, SonosZoneDescription } from "nativescript-sonos";
+import { GridLayout } from "ui/layouts/grid-layout";
+import { ItemEventData } from "ui/list-view";
+import { ObservableArray } from "data/observable-array";
 
 export class TopologyViewModel extends Observable {
-  private _zones: Array<SonosZone>;
-  public get zones(): Array<SonosZone> {
-      return this._zones;
+  private _closeCallback: Function;
+
+  private _ip: string;
+  public get selectedIP(): string {
+    return this._ip;
   }
-  public set zones(value: Array<SonosZone>) {
-      if (this._zones !== value) {
-          this._zones = value;
-          this.notifyPropertyChange("zones", value);
-      }
+  public set selectedIP(value: string) {
+    this._ip = value;
+    this.notifyPropertyChange("selectedIP", value);
+  }
+
+  private _selectedUUID : string;
+  public get selectedUUID() : string {
+    return this._selectedUUID;
+  }
+  public set selectedUUID(v : string) {
+    if (v === this.selectedUUID) return; // No change
+
+    this._selectedUUID = v;
+    this.notifyPropertyChange("selectedUUID", v);
+  }
+
+  private _zones: ObservableArray<{ isSelected: boolean, zone: SonosZone}>;
+  public get zones(): ObservableArray<{ isSelected: boolean, zone: SonosZone}> {
+    return this._zones;
+  }
+  public set zones(value: ObservableArray<{ isSelected: boolean, zone: SonosZone}>) {
+    if (this._zones !== value) {
+      this._zones = value;
+      this.notifyPropertyChange("zones", value);
+    }
+  }
+
+  public get closeCallback(): Function {
+    return this._closeCallback;
+  }
+  public set closeCallback(value: Function) {
+    this._closeCallback = value;
+    this.notifyPropertyChange("closeCallback", value);
   }
 
   constructor() {
     super();
 
-    this._zones = new Array<SonosZone>();
+    this._zones = new ObservableArray<{ isSelected: boolean, zone: SonosZone}>();
+
+    app.resources["zoneIconUrlConverter"] = this.zoneIconUrlConverter;;
   }
 
-  public closeCallback() {
-    // TODO: Extra close callback logic
+  public onZoneTap(args: ItemEventData) {
+    let grid = <GridLayout>args.view;
+    let context = <{ isSelected: boolean, zone: SonosZone}>grid.bindingContext;
+
+    this.selectedUUID = context.zone.uuid;
+    this.selectedIP = context.zone.location.substring(0, context.zone.location.indexOf('/xml')).replace("http://", "").split(":")[0];
+
+    // Updated ListView to show selected
+    let index = this.zones.indexOf(context);
+    this.zones.forEach((z, i) => {
+      if (i === index) {
+        z.isSelected = true;
+        this.zones.setItem(i, z);
+      } else {
+        z.isSelected = false;
+      }
+    });
+  }
+
+  public zoneIconUrlConverter = {
+    toView: (location: string, description: SonosZoneDescription) => {
+      return location.substring(0, location.indexOf('/xml')) + description.iconList.icon[0].url[0];
+    }
   }
 
   public closeWindow() {
-    this.closeCallback();
+    this.closeCallback(this.selectedIP);
   }
 }

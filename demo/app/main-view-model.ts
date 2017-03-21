@@ -4,6 +4,7 @@ import { Observable, PropertyChangeData, EventData } from "data/observable";
 import { prompt } from "ui/dialogs";
 import { Button } from "ui/button";
 import { topmost } from "ui/frame";
+import * as appSettings from "application-settings";
 
 export class HelloWorldModel extends Observable {
     private _message: string;
@@ -18,27 +19,31 @@ export class HelloWorldModel extends Observable {
     private volumeRefreshTimer: number;
     private volTimer: number;
     private sonos: Sonos;
-    private _sonosIp: string;
 
     constructor() {
         super();
 
-        this.sonosIp = "10.0.1.195";
-        this.sonos = new Sonos(this.sonosIp);
-        this.loadPlayerName();
+        this.loadPlayerName(); // Load default name
 
-        this.loadTrackInfo();
-
-        this.refreshState();
-        this.refreshVolume();
+        if (this.sonosIp !== undefined) {
+            this.sonos = new Sonos(this.sonosIp);
+            
+            this.loadPlayerName();
+            this.loadTrackInfo();
+            this.refreshState();
+            this.refreshVolume();
+        }
     }
 
     get sonosIp(): string {
-        return this._sonosIp;
+        return appSettings.getString("sonosIp");
     }
-
     set sonosIp(value: string) {
-        this._sonosIp = value;
+        if (value === this.sonosIp) return; // No change
+
+        this.changeIp(value);
+
+        appSettings.setString("sonosIp", value);
         this.notifyPropertyChange("sonosIp", value);
     }
 
@@ -53,7 +58,6 @@ export class HelloWorldModel extends Observable {
         }
     }
 
-    
     private _title : string;
     public get title() : string {
         return this._title;
@@ -151,14 +155,10 @@ export class HelloWorldModel extends Observable {
         }
     }
 
-    public changeIp() {
+    public onChangeIpPrompt() {
         prompt("Please enter your Sonos IP address:")
             .then((result) => {
                 this.sonosIp = result.text;
-                this.sonos = new Sonos(result.text);
-
-                this.loadPlayerName();
-                this.loadTrackInfo();
             });
     }
 
@@ -312,14 +312,19 @@ export class HelloWorldModel extends Observable {
         let obj = <Button>args.object;
         let page = <Page>topmost().currentPage;
 
-        page.showModal("./modals/topology/topology", this.sonosIp, () => { return; });
+        page.showModal("./modals/topology/topology", this.sonosIp, (selectedIP) => { 
+            // Change selected IP address based on topology selection
+            if (selectedIP !== undefined) {
+                this.sonosIp = selectedIP;
+            }
+        });
     }
 
     public getDescription() {
         this.sonos.deviceDescription()
             .then((result) => {
                 console.log(`GET DESCRIPTION SUCCESS: ${JSON.stringify(result)}`);
-                alert(`Get Description Success\n\nDevice in ${result.roomName} has serial no: ${result.serialNum}`);
+                alert(`Get Description Success\n\nDevice in ${result.roomName} has serial no: ${result.serialNum}\n\nSee console log for more detail.`);
             })
             .catch((err) => {
                 console.warn("Get Description Error: "+ err);
@@ -331,6 +336,14 @@ export class HelloWorldModel extends Observable {
         toView: (value, format) => {
             return (format) ? "-"+ this.hhmmss(value) : this.hhmmss(value);
         }
+    }
+
+    private changeIp(ip: string) {
+        this.sonos = new Sonos(ip);
+
+        this.loadPlayerName();
+        this.loadTrackInfo();
+        this.refreshVolume();
     }
 
     private pad = (num) => {
@@ -357,10 +370,14 @@ export class HelloWorldModel extends Observable {
     }
 
     private loadPlayerName() {
-        this.sonos.getZoneAttrs()
-            .then((data) => {
-                this.zoneName = data.currentZoneName;
-            });
+        if (this.sonos === undefined) {
+            this.zoneName = "No Zone Selected";
+        } else {
+            this.sonos.getZoneAttrs()
+                .then((data) => {
+                    this.zoneName = data.currentZoneName;
+                });
+        }
     }
 
     private changeVolume(newVol: number) {

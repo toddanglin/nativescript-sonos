@@ -1,8 +1,8 @@
 <Page xmlns="http://schemas.nativescript.org/tns.xsd" navigatingTo="navigatingTo" class="page">
     <Page.actionBar>
-        <ActionBar title="{{ sonosIp, (zoneName || 'Sonos Tester')+' ('+ sonosIp +')' }}" icon="" class="action-bar">
+        <ActionBar title="{{ sonosIp, (zoneName || 'Sonos Tester') }}" icon="" class="action-bar">
         <ActionItem tap="{{ changeIp }}"
-            ios.systemIcon="2" ios.position="right"
+            ios.position="right"
             text="Edit Sonos Address" />
         </ActionBar>
     </Page.actionBar>
