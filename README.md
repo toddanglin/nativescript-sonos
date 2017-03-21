@@ -57,10 +57,12 @@ This plugin does not yet support all of the methods from the [original NodeJS li
 - getCurrentState: () => Promise<SonosState>;
 - getZoneInfo: () => Promise<ZoneInfo>;
 - getZoneAttrs: () => Promise<ZoneAttributes>;
+- getZoneGroupState: () => Promise<SonosZoneGroup[]>;
 - getLEDState: () => Promise<boolean>;
 - setLEDState: (setStateOn: boolean) => Promise<void>;
 - getTopology: () => Promise<SonosTopology>;
-- deviceDescription: () => Promise<any>;
+- getZonesWithDescriptions: () => Promise<SonosZone[]>;
+- deviceDescription: (host?: string, port?: number) => Promise<SonosZoneDescription>;
 - getQueue: () => Promise<SearchMusicResult>;
 - getMusicLibrary: (searchType: SonosSearchType, startIndex?: number, pageSize?: number) => Promise<SearchMusicResult>;
 - searchMusicLibrary: (searchType: SonosSearchType, searchTerm: string, startIndex?: number, pageSize?: number) => Promise<SearchMusicResult>;
