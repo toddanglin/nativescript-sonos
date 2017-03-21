@@ -23,10 +23,12 @@ export declare class Sonos {
     getCurrentState: () => Promise<SonosState>;
     getZoneInfo: () => Promise<ZoneInfo>;
     getZoneAttrs: () => Promise<ZoneAttributes>;
+    getZoneGroupState: () => Promise<SonosZoneGroup[]>;
     getLEDState: () => Promise<boolean>;
     setLEDState: (setStateOn: boolean) => Promise<void>;
     getTopology: () => Promise<SonosTopology>;
-    deviceDescription: () => Promise<any>;
+    getZonesWithDescriptions: () => Promise<SonosZone[]>;
+    deviceDescription: (host?: string, port?: number) => Promise<SonosZoneDescription>;
     getMusicLibrary: (searchType: SonosSearchType, startIndex?: number, pageSize?: number) => Promise<SearchMusicResult>;
     searchMusicLibrary: (searchType: SonosSearchType, searchTerm: string, startIndex?: number, pageSize?: number) => Promise<SearchMusicResult>;
     getFavoritesRadioStations: (startIndex?: number, pageSize?: number) => Promise<SearchMusicResult>;
@@ -101,7 +103,71 @@ export declare class SonosZone {
     bootSeq: number;
     uuid: string;
     name: string;
-    constructor(group?: string, coordinator?: boolean, wirelessMode?: number, wirelessLeafOnly?: number, hasConfiguredSSID?: boolean, channelFreq?: number, behindWifiExt?: boolean, wifiEnabled?: boolean, location?: string, version?: string, minCompatibleVersion?: string, legacyCompatibleVersion?: string, bootSeq?: number, uuid?: string, name?: string);
+    configuration: number;
+    icon: string;
+    description: SonosZoneDescription;
+    orientation: number;
+    roomCalibrationState: number;
+    secureRegState: number;
+    constructor(group?: string, coordinator?: boolean, wirelessMode?: number, wirelessLeafOnly?: number, hasConfiguredSSID?: boolean, channelFreq?: number, behindWifiExt?: boolean, wifiEnabled?: boolean, location?: string, version?: string, minCompatibleVersion?: string, legacyCompatibleVersion?: string, bootSeq?: number, uuid?: string, name?: string, configuration?: number, icon?: string, description?: SonosZoneDescription, orientation?: number, roomCalibrationState?: number, secureRegState?: number);
+}
+export declare class SonosZoneGroup {
+    coordinator: string;
+    id: string;
+    zoneMembers: Array<SonosZone>;
+    constructor(coordinator?: string, id?: string, zoneMembers?: Array<SonosZone>);
+}
+export declare class SonosZoneDescription {
+    deviceType: string;
+    friendlyName: string;
+    manufacturer: string;
+    manufacturerURL: string;
+    modelNumber: string;
+    modelDescription: string;
+    modelName: string;
+    modelURL: string;
+    softwareVersion: string;
+    hardwareVersion: string;
+    serialNum: string;
+    UDN: string;
+    iconList: {
+        icon: Array<{
+            id: Array<number>;
+            mimetype: Array<string>;
+            width: Array<number>;
+            height: Array<number>;
+            depth: Array<number>;
+            url: Array<string>;
+        }>;
+    };
+    minCompatibleVersion: string;
+    legacyCompatibleVersion: string;
+    displayVersion: string;
+    extraVersion: string;
+    roomName: string;
+    displayName: string;
+    zoneType: number;
+    feature1: string;
+    feature2: string;
+    feature3: string;
+    variant: number;
+    internalSpeakerSize: number;
+    bassExtension: number;
+    satGainOffset: number;
+    memory: number;
+    flash: number;
+    flashRepartitioned: number;
+    ampOnTime: number;
+    constructor(deviceType?: string, friendlyName?: string, manufacturer?: string, manufacturerURL?: string, modelNumber?: string, modelDescription?: string, modelName?: string, modelURL?: string, softwareVersion?: string, hardwareVersion?: string, serialNum?: string, UDN?: string, iconList?: {
+        icon: Array<{
+            id: Array<number>;
+            mimetype: Array<string>;
+            width: Array<number>;
+            height: Array<number>;
+            depth: Array<number>;
+            url: Array<string>;
+        }>;
+    }, minCompatibleVersion?: string, legacyCompatibleVersion?: string, displayVersion?: string, extraVersion?: string, roomName?: string, displayName?: string, zoneType?: number, feature1?: string, feature2?: string, feature3?: string, variant?: number, internalSpeakerSize?: number, bassExtension?: number, satGainOffset?: number, memory?: number, flash?: number, flashRepartitioned?: number, ampOnTime?: number);
 }
 export declare class SonosMediaServer {
     location: string;

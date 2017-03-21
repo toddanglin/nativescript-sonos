@@ -1,8 +1,9 @@
-import { Track, UriObject, PlayModeEnum, SonosState, ZoneAttributes, ZoneInfo, SearchMusicResult, SonosTopology, SonosSearchType } from "./sonos.model";
+import { Track, UriObject, PlayModeEnum, SonosState, ZoneAttributes, ZoneInfo, SearchMusicResult, SonosTopology, SonosSearchType, SonosZone, SonosZoneDescription, SonosZoneGroup } from "./sonos.model";
 export declare class Sonos {
     private TRANSPORT_ENDPOINT;
     private RENDERING_ENDPOINT;
     private DEVICE_ENDPOINT;
+    private ZONEGROUP_ENDPOINT;
     private host;
     private port;
     private options;
@@ -29,10 +30,12 @@ export declare class Sonos {
     getCurrentState: () => Promise<SonosState>;
     getZoneInfo: () => Promise<ZoneInfo>;
     getZoneAttrs: () => Promise<ZoneAttributes>;
+    getZoneGroupState: () => Promise<SonosZoneGroup[]>;
     getLEDState: () => Promise<boolean>;
     setLEDState: (setStateOn: boolean) => Promise<void>;
     getTopology: () => Promise<SonosTopology>;
-    deviceDescription: () => Promise<any>;
+    getZonesWithDescriptions: () => Promise<SonosZone[]>;
+    deviceDescription: (host?: string, port?: number) => Promise<SonosZoneDescription>;
     getMusicLibrary: (searchType: SonosSearchType, startIndex?: number, pageSize?: number) => Promise<SearchMusicResult>;
     searchMusicLibrary: (searchType: SonosSearchType, searchTerm: string, startIndex?: number, pageSize?: number) => Promise<SearchMusicResult>;
     getFavoritesRadioStations: (startIndex?: number, pageSize?: number) => Promise<SearchMusicResult>;

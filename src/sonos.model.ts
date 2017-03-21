@@ -59,7 +59,54 @@ export class SonosZone {
                 public legacyCompatibleVersion?: string,
                 public bootSeq?: number,
                 public uuid?: string,
-                public name?: string){}
+                public name?: string,
+                public configuration?: number,
+                public icon?: string,
+                public description?: SonosZoneDescription,
+                public orientation?: number,
+                public roomCalibrationState?: number,
+                public secureRegState?: number){}
+                
+}
+
+export class SonosZoneGroup {
+    constructor(public coordinator?: string,
+                public id?: string,
+                public zoneMembers?: Array<SonosZone>){}
+}
+
+export class SonosZoneDescription {
+    constructor(public deviceType?: string,
+                public friendlyName?: string,
+                public manufacturer?: string,
+                public manufacturerURL?: string,
+                public modelNumber?: string,
+                public modelDescription?: string,
+                public modelName?: string,
+                public modelURL?: string,
+                public softwareVersion?: string,
+                public hardwareVersion?: string,
+                public serialNum?: string,
+                public UDN?: string,
+                public iconList?: { icon: Array<{ id: Array<number>, mimetype: Array<string>, width: Array<number>, height: Array<number>, depth: Array<number>, url: Array<string> }>},
+                public minCompatibleVersion?: string,
+                public legacyCompatibleVersion?: string,
+                public displayVersion?: string,
+                public extraVersion?: string,
+                public roomName?: string,
+                public displayName?: string,
+                public zoneType?: number,
+                public feature1?: string,
+                public feature2?: string,
+                public feature3?: string,
+                public variant?: number,
+                public internalSpeakerSize?: number,
+                public bassExtension?: number,
+                public satGainOffset?: number,
+                public memory?: number,
+                public flash?: number,
+                public flashRepartitioned?: number,
+                public ampOnTime?: number){}
                 
 }
 

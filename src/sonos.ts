@@ -1,5 +1,5 @@
 let xml2js = require("nativescript-xml2js");
-import { Track, UriObject, PlayModeEnum, SonosState, ZoneAttributes, ZoneInfo, SearchMusicResult, SonosTopology, SonosSearchType, SonosZone, SonosMediaServer } from "./sonos.model";
+import { Track, UriObject, PlayModeEnum, SonosState, ZoneAttributes, ZoneInfo, SearchMusicResult, SonosTopology, SonosSearchType, SonosZone, SonosMediaServer, SonosZoneDescription, SonosZoneGroup } from "./sonos.model";
 import { ContentDirectory } from "./services/sonos-services";
 import * as trace from "trace";
 import * as http from "http";
@@ -18,6 +18,7 @@ export class Sonos {
     private TRANSPORT_ENDPOINT = "/MediaRenderer/AVTransport/Control";
     private RENDERING_ENDPOINT = "/MediaRenderer/RenderingControl/Control";
     private DEVICE_ENDPOINT = "/DeviceProperties/Control";
+    private ZONEGROUP_ENDPOINT = "/ZoneGroupTopology/Control";
 
     private host: string;
     private port: number;
@@ -31,6 +32,7 @@ export class Sonos {
         if (!this.options.endpoints.transport) this.options.endpoints.transport = this.TRANSPORT_ENDPOINT;
         if (!this.options.endpoints.rendering) this.options.endpoints.rendering = this.RENDERING_ENDPOINT;
         if (!this.options.endpoints.device) this.options.endpoints.device = this.DEVICE_ENDPOINT;
+        if (!this.options.endpoints.zonegroup) this.options.endpoints.zonegroup = this.ZONEGROUP_ENDPOINT;
     }
 
     /**
@@ -515,6 +517,73 @@ export class Sonos {
     }
 
     /**
+     * Get Zone Group State
+     * @returns {Promise<SonosZoneGroup>} SonosZoneGroup object describing zone coordinators and members
+     */
+    public getZoneGroupState = (): Promise<Array<SonosZoneGroup>> => {
+        return new Promise((resolve, reject) => {
+            this.executeRequest('"urn:schemas-upnp-org:service:ZoneGroupTopology:1#GetZoneGroupState"',
+                '"<u:GetZoneGroupState xmlns:u="urn:schemas-upnp-org:service:ZoneGroupTopology:1"></u:GetZoneGroupState>"',
+                "u:GetZoneGroupStateResponse", this.options.endpoints.zonegroup)
+                .then((data) => {
+                    if (data[0].ZoneGroupState === undefined) {
+                        return resolve();
+                    }
+
+                    xml2js.parseString(data[0].ZoneGroupState[0], (err, zones) => {
+                            if (err) {
+                                throw new Error(`Error Parsing ZoneGroupState XML: ${err}`);
+                            }
+
+                            let zoneGroups = new Array<SonosZoneGroup>();
+
+                            // Map group and member detail to JS objects
+                            zones.ZoneGroups.ZoneGroup.forEach((z) => {
+                                let group = new SonosZoneGroup();
+                                group.coordinator = z.$.Coordinator;
+                                group.id = z.$.ID;
+
+                                let members = new Array<SonosZone>();
+                                z.ZoneGroupMember.forEach((m) => {
+                                    let zone = m.$;
+                                    let sonosZone = new SonosZone();
+                                    for(let p in zone) {
+                                        if(zone.hasOwnProperty(p)) {
+                                            let propName = p.charAt(0).toLowerCase() + p.slice(1);
+
+                                            // Handle special property name mappings
+                                            switch(propName.toLowerCase()) {
+                                                case "uuid":
+                                                    propName = "uuid";
+                                                    break;
+                                                case "softwareversion":
+                                                    propName = "version";
+                                                    break;
+                                                case "zonename":
+                                                    propName = "name";
+                                                    break;
+                                            }
+
+                                            sonosZone[propName] = zone[p];
+                                        }
+                                    }
+                                    members.push(sonosZone);
+                                });
+
+                                group.zoneMembers = members;
+                                zoneGroups.push(group);
+                            });
+
+                            resolve(zoneGroups);
+                        });
+                })
+                .catch((err) => {
+                    reject(err);
+                })
+        })
+    }
+
+    /**
      * Get the LED State
      * @returns  {Promise<boolean>} True for light "On", False for light "Off"
      */
@@ -645,14 +714,66 @@ export class Sonos {
     }
 
     /**
+    * Get Zones With Descriptions
+    * @returns {Promise<Array<SonosZone>>} Array or SonosZone objects describing that include extended device descriptions
+    */
+    public getZonesWithDescriptions = (): Promise<Array<SonosZone>> => {
+        return new Promise((resolve, reject) => {
+            this.getTopology()
+                .then((result) => {
+                    // No devices/zones found
+                    if (result.zones.length === 0) {
+                        return resolve();
+                    }
+
+                    let arrPromises = new Array<Promise<SonosZoneDescription>>();
+                    result.zones.forEach((z) => {
+                        let ip = z.location.substring(7, z.location.indexOf("/xml"));
+                        let port = 1400;
+                        if (ip.indexOf(":") !== -1) {
+                            port = parseInt(ip.substr(ip.indexOf(":")+1, ip.length), 10);
+                            ip = ip.substr(0, ip.indexOf(":"));
+                        }
+                        let p = this.deviceDescription(ip, port)
+                        arrPromises.push(p);
+                    });
+
+                    Promise.all(arrPromises)
+                        .then((results)  => {
+                            let rtrnVal = result.zones.map((z) => {
+                                results.forEach((d) => {
+                                    // Find the device description that matches the zone uuid
+                                    let deviceUUID = d.UDN.substring(5);
+                                    if (z.uuid === deviceUUID) {
+                                        z.description = d;
+                                    }
+                                });
+
+                                // Return the enriched SonosZone
+                                return z;
+                            })
+
+                            resolve(rtrnVal);
+                        })
+                        .catch((err) => {
+                            throw new Error(`Error getting all zone descriptions: ${err}`);
+                        });
+                })
+                .catch((err) => {
+                    reject(`Error in getZonesWithDescriptions: ${err}`);
+                })
+        });
+    }
+
+    /**
      * Get Information provided by /xml/device_description.xml
      * @returns  {Promise<any>} Device details JSON from /xml/device_description.xml
      */
-    public deviceDescription = (): Promise<any> => {
+    public deviceDescription = (host = this.host, port = this.port): Promise<SonosZoneDescription> => {
         return new Promise((resolve, reject) => {
             http.request({
                 method: "GET",
-                url: `http://${this.host}:${this.port}/xml/device_description.xml`
+                url: `http://${host}:${port}/xml/device_description.xml`
             })
                 .then((result) => {
                     if (result.statusCode !== 200) {
@@ -664,7 +785,7 @@ export class Sonos {
                             throw new Error(`Sonos Error Parsing Device Description XML: ${err}`);
                         }
 
-                        let output = {};
+                        let output = new SonosZoneDescription();
                         for (let d in json.root.device[0]) {
                             if (json.root.device[0].hasOwnProperty(d)) {
                                 output[d] = json.root.device[0][d][0];
