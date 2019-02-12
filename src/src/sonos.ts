@@ -1,8 +1,8 @@
 let xml2js = require("nativescript-xml2js");
 import { Track, UriObject, PlayModeEnum, SonosState, ZoneAttributes, ZoneInfo, SearchMusicResult, SonosTopology, SonosSearchType, SonosZone, SonosMediaServer, SonosZoneDescription, SonosZoneGroup } from "./sonos.model";
 import { ContentDirectory } from "./services/sonos-services";
-import * as trace from "trace";
-import * as http from "http";
+import * as trace from "tns-core-modules/trace";
+import * as http from "tns-core-modules/http";
 import * as _ from "underscore";
 
 /**
@@ -636,81 +636,80 @@ export class Sonos {
      */
     public getTopology = (): Promise<SonosTopology> => {
         return new Promise((resolve, reject) => {
-            fetch(`http://${this.host}:${this.port}/status/topology`)
-                .then((response) => {
-                    if (!response.ok) {
-                        throw new Error(`Network error getting Sonos topology: ${response.statusText}`);
-                    }
-                    return response.text();
-                })
+            this.executeRequest('"urn:schemas-upnp-org:service:ZoneGroupTopology:1#GetZoneGroupState"',
+                '"<u:GetZoneGroupState xmlns:u="urn:schemas-upnp-org:service:ZoneGroupTopology:1"></u:GetZoneGroupState>"',
+                "u:GetZoneGroupStateResponse", this.options.endpoints.zonegroup)
                 .then((data) => {
-                    xml2js.parseString(data, (error, topology) => {
-                        if (error) {
-                            throw new Error(`Error parsing Sonos topology XML: ${error}`);
-                        }
+                    if (data[0].ZoneGroupState === undefined) {
+                        return resolve();
+                    }
 
-                        let info = topology.ZPSupportInfo;
-                        let zones = new Array<SonosZone>();
-                        let mediaServers = new Array<SonosMediaServer>();
-                        if (info.ZonePlayers && info.ZonePlayers.length > 0) {
-                            zones = _.map(info.ZonePlayers[0].ZonePlayer, function (zone) {
-                                let newZone = new SonosZone();
-                                newZone.name = zone._;
-                                for (let p in newZone) {
-                                    let lowerProp = p.toLowerCase();
-                                    if (zone.$.hasOwnProperty(lowerProp)) {
-                                        // Some extra handling for type conversion
-                                        let propValue = zone.$[lowerProp];
-                                        switch(lowerProp) {
-                                            case "coordinator":
-                                                propValue = (propValue === "true") ? true : false;
-                                                break;
-                                            case "wifienabled":
-                                            case "wirelessleafonly":
-                                            case "hasconfiguredssid":
-                                            case "behindwifiext":
-                                                propValue = (propValue === "1") ? true : false;
-                                                break;
+                    xml2js.parseString(data[0].ZoneGroupState[0], (err, zones) => {
+                            if (err) {
+                                throw new Error(`Error Parsing ZoneGroupState XML: ${err}`);
+                            }
+
+                            // Map group and member detail to JS objects
+                            let result = new Array<SonosZone>();
+                            zones.ZoneGroups.ZoneGroup.forEach((z) => {
+                                let group = new SonosZoneGroup();
+                                group.coordinator = z.$.Coordinator;
+                                group.id = z.$.ID;
+
+                                z.ZoneGroupMember.forEach((m) => {
+                                    let zone = m.$;
+                                    let sonosZone = new SonosZone();
+                                    for(let p in zone) {
+                                        if(zone.hasOwnProperty(p)) {
+                                            let propName = p.charAt(0).toLowerCase() + p.slice(1);
+                                            let propValue = zone[p];
+
+                                            // Handle special property name mappings
+                                            switch(propName.toLowerCase()) {
+                                                case "uuid":
+                                                    propName = "uuid";
+                                                    break;
+                                                case "softwareversion":
+                                                    propName = "version";
+                                                    break;
+                                                case "zonename":
+                                                    propName = "name";
+                                                    break;
+                                                case "behindwifiextender":
+                                                    propName = "behindWifiExt";
+                                                    break;
+                                            }
+
+                                            switch(propName.toLowerCase()) {
+                                                case "wifienabled":
+                                                case "wirelessleafonly":
+                                                case "hasconfiguredssid":
+                                                case "behindwifiext":
+                                                    propValue = (propValue === "1") ? true : false;
+                                                    break;
+                                            }
+
+                                            sonosZone[propName] = zone[p];
                                         }
-                                        newZone[p] = propValue;
                                     }
-                                }
+                                    // Compare to ZoneGroup to see if member is coordinator
+                                    sonosZone.coordinator = (sonosZone.uuid === group.id) ? true : false;
 
-                                return newZone;
+                                    result.push(sonosZone);
+                                });
                             });
-                        }
-                        if (info.MediaServers && info.MediaServers.length > 0) {
-                            mediaServers = _.map(info.MediaServers[0].MediaServer, function (server) {
-                                let newServer = new SonosMediaServer();
-                                newServer.name = server._;
-                                for (let p in newServer) {
-                                    let lowerProp = p.toLowerCase();
-                                    if (server.$.hasOwnProperty(lowerProp)) {
-                                        // Some extra processing for boolean type conversion
-                                        let propValue = server.$[lowerProp];
-                                        switch(lowerProp) {
-                                            case "canbedisplayed":
-                                            case "unavailable":
-                                                propValue = (propValue === "true") ? true : false;
-                                        }
-                                        newServer[p] = propValue;
-                                    }
-                                }
 
-                                return newServer;  
-                            });
-                        }
+                            // TODO: Is there a new API for querying SonosMediaServers?
+                            // getTopology was deprecated and new approach does not provide obvious path to media servers
 
-                        let result = new SonosTopology(zones, mediaServers);
-                        resolve(result);
-                    });
+                            let topology = new SonosTopology(result, []);
+                            resolve(topology);
+                        });
                 })
                 .catch((err) => {
-                    let errMsg = `Sonos getTopology Error: ${err}`;
-                    trace.write(errMsg, trace.categories.Error, trace.messageType.error);
-                    reject(errMsg);
-                });
-        });
+                    reject(err);
+                })
+            });
     }
 
     /**

@@ -8,6 +8,7 @@
         "emitDecoratorMetadata": true,
         "experimentalDecorators": true,
         "lib": [
+            "es6",
             "dom"
         ],
         "pretty": true,
@@ -19,13 +20,22 @@
         "noImplicitReturns": true,
         "noImplicitUseStrict": false,
         "noFallthroughCasesInSwitch": true,
-        "typeRoots": [
-            "./node_modules/@types",
-            "./node_modules"
-        ],
-        "types": []
+        "baseUrl": ".",
+        "paths": {
+            "*": [
+                "./node_modules/*"
+            ],
+            "~/*": [
+                "app/*"
+            ]
+        }
     },
+    "include": [
+        "../",
+        "**/*"
+    ],
     "exclude": [
+        "../node_modules",
         "node_modules",
         "platforms"
     ],

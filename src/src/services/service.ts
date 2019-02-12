@@ -1,7 +1,7 @@
 let xml2js = require("nativescript-xml2js");
 import { Track, UriObject, PlayModeEnum, SonosState, ZoneAttributes, ZoneInfo, SearchMusicResult } from "../sonos.model";
-import * as trace from "trace";
-import * as http from "http";
+import * as trace from "tns-core-modules/trace";
+import * as http from "tns-core-modules/http";
 import * as _ from "underscore";
 
 export class Service {

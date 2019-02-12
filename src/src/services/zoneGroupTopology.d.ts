@@ -7,5 +7,6 @@ export declare class ZoneGroupTopology extends Service {
     reportAlarmStartedRunning: (options: any) => Promise<any>;
     submitDiagnostics: (options: any) => Promise<any>;
     registerMobileDevice: (options: any) => Promise<any>;
-    getZoneGroupAttributes: (options: any) => Promise<any>;
+    getZoneGroupAttributes: () => Promise<any>;
+    getZoneGroupState: () => Promise<any>;
 }

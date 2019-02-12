@@ -1,11 +1,11 @@
-import { Page, ShownModallyData } from "ui/page";
-import { Switch } from "ui/switch";
-import { Button } from "ui/button";
-import { EventData } from "data/observable";
+import { Page, ShownModallyData } from "tns-core-modules/ui/page";
+import { Switch } from "tns-core-modules/ui/switch";
+import { Button } from "tns-core-modules/ui/button";
+import { EventData } from "tns-core-modules/data/observable";
 import { PullToRefresh } from "nativescript-pulltorefresh";
 import { TopologyViewModel } from "./topology-viewmodel";
 import { Sonos, SonosZoneGroup, SonosZone } from "nativescript-sonos";
-import { ObservableArray } from "data/observable-array";
+import { ObservableArray } from "tns-core-modules/data/observable-array";
 
 let vm: TopologyViewModel;
 let sonos: Sonos;
@@ -83,7 +83,7 @@ function loadZones(): Promise<void> {
                             }
 
                             // Don't include BOOST device (if present) since cannot be directly user controlled
-                            if (m.description.modelName.indexOf("BOOST") === -1) {
+                            if (m.description.modelName.toLowerCase().indexOf("boost") === -1) {
                                 displayZones.push({ isSelected: false, zone: m});
                             }
                         }

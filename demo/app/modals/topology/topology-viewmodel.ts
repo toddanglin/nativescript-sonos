@@ -1,11 +1,11 @@
-import { Observable, PropertyChangeData, EventData } from "data/observable";
-import { StackLayout } from "ui/layouts/stack-layout";
-import * as trace from 'trace';
-import * as app from 'application';
+import { Observable, PropertyChangeData, EventData } from "tns-core-modules/data/observable";
+import { StackLayout } from "tns-core-modules/ui/layouts/stack-layout";
+import * as trace from 'tns-core-modules/trace';
+import * as app from 'tns-core-modules/application';
 import { SonosZone, SonosZoneDescription } from "nativescript-sonos";
-import { GridLayout } from "ui/layouts/grid-layout";
-import { ItemEventData } from "ui/list-view";
-import { ObservableArray } from "data/observable-array";
+import { GridLayout } from "tns-core-modules/ui/layouts/grid-layout";
+import { ItemEventData } from "tns-core-modules/ui/list-view";
+import { ObservableArray } from "tns-core-modules/data/observable-array";
 
 export class TopologyViewModel extends Observable {
   private _closeCallback: Function;
@@ -54,7 +54,9 @@ export class TopologyViewModel extends Observable {
 
     this._zones = new ObservableArray<{ isSelected: boolean, zone: SonosZone}>();
 
-    app.resources["zoneIconUrlConverter"] = this.zoneIconUrlConverter;;
+    let r = app.getResources();
+    r.zoneIconUrlConverter = this.zoneIconUrlConverter;
+    app.setResources(r);
   }
 
   public onZoneTap(args: ItemEventData) {

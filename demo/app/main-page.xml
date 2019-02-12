@@ -1,7 +1,7 @@
 <Page xmlns="http://schemas.nativescript.org/tns.xsd" navigatingTo="navigatingTo" class="page">
     <Page.actionBar>
         <ActionBar title="{{ sonosIp, (zoneName || 'Sonos Tester') }}" icon="" class="action-bar">
-        <ActionItem tap="{{ changeIp }}"
+        <ActionItem tap="{{ onChangeIpPrompt }}"
             ios.position="right"
             text="Edit Sonos Address" />
         </ActionBar>
@@ -37,7 +37,7 @@
             </StackLayout>
             <StackLayout orientation="horizontal" col="1" style="horizontal-align:right;width:40%;">
                 <Button text="&#xf4cf;" tap="{{ toggleMute }}" class="btn-icon-lg" style="background-color: transparent;width:auto;height:auto;" />
-                <Slider minValue="0" maxValue="100" value="{{ currentVolume }}" propertyChange="{{ volumeSliderChange }}" />
+                <Slider minValue="0" maxValue="100" value="{{ currentVolume }}" loaded="onVolumeSliderLoaded" />
             </StackLayout>
         </GridLayout>
     </GridLayout>

@@ -14,5 +14,6 @@ export class ZoneGroupTopology extends Service {
     public reportAlarmStartedRunning = (options): Promise<any> => { return this.request('ReportAlarmStartedRunning', options); }
     public submitDiagnostics = (options): Promise<any> => { return this.request('SubmitDiagnostics', options); }
     public registerMobileDevice = (options): Promise<any> => { return this.request('RegisterMobileDevice', options); }
-    public getZoneGroupAttributes = (options): Promise<any> => { return this.request('GetZoneGroupAttributes', options); }
+    public getZoneGroupAttributes = (): Promise<any> => { return this.request('GetZoneGroupAttributes', {}); }
+    public getZoneGroupState = (): Promise<any> => { return this.request('GetZoneGroupState', {}); }
 }

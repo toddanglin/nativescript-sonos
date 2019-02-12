@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.0 (11 Feb 2019)
+- Updated all dependencies to MUCH more recent versions
+- Fixed bug in `getZonesWithDescriptions` caused by deprecated Sonos API (/status/topology)
+- Refactored project structure
+- Fixed a few small bugs in demo project (like introduced by newer versions of {N})
+- NOTE: `getTopology` no longer attempts to return media servers (needs to be revisited in future update)
+
 ## 0.4.0 (20 Mar 2017)
 - Added two methods: `getZoneGroupState`, `getZonesWithDescriptions`
 - Added optional parameters to `deviceDescription` (`host?: string, port?: number`)

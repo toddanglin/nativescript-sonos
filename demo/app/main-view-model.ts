@@ -1,10 +1,11 @@
-import { Page} from "ui/page";
+import { Page} from "tns-core-modules/ui/page";
 import { Sonos, SonosState, SonosSearchType } from "nativescript-sonos";
-import { Observable, PropertyChangeData, EventData } from "data/observable";
-import { prompt } from "ui/dialogs";
-import { Button } from "ui/button";
-import { topmost } from "ui/frame";
-import * as appSettings from "application-settings";
+import { Observable, PropertyChangeData, EventData } from "tns-core-modules/data/observable";
+import { prompt } from "tns-core-modules/ui/dialogs";
+import { Button } from "tns-core-modules/ui/button";
+import { topmost } from "tns-core-modules/ui/frame";
+import * as appSettings from "tns-core-modules/application-settings";
+import { setTimeout } from "tns-core-modules/timer";
 
 export class HelloWorldModel extends Observable {
     private _message: string;
@@ -247,7 +248,7 @@ export class HelloWorldModel extends Observable {
             });
     }
 
-    public volumeSliderChange(args: PropertyChangeData) {
+    public volumeSliderChange = (args: PropertyChangeData) => {
         clearTimeout(this.volTimer);
         if (args.propertyName === "value") {
             clearTimeout(this.volumeRefreshTimer);
